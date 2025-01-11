@@ -12,8 +12,13 @@ phases:
     commands:
       - echo Packaging Lambda function...
       - mkdir -p build
-      - zip -r build/AuthService.zip * -x 'src/*/.*'
-      - zip -r build/AuthService.zip src/* package.json package-lock.json
+      # Remove any previous files in build directory and copy only the necessary ones
+      - rm -rf build/*
+      # Copy index.js from src/ to the root directory
+      - cp src/index.js .  # Copy the index.js to the root directory
+      # Create the zip package with the necessary files
+      - zip -r build/AuthService.zip index.js package.json package-lock.json
+      # Optionally, you can also include other files if needed
       - echo Deploying to Lambda...
       # Deploy the Lambda function using the AWS CLI
       - aws lambda update-function-code --function-name AuthenticationLambda --zip-file fileb://build/AuthService.zip

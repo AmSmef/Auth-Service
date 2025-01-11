@@ -29,6 +29,10 @@ phases:
       # Deploy the Lambda function using the AWS CLI
       - aws lambda update-function-code --function-name AuthenticationLambda --zip-file fileb://build/AuthService.zip
 
+      - echo syncing frontend files to to S3...
+
+      - aws s3 sync ./auth/ s3://devops-bucket-amsmef/frontend/auth/ --acl public-read
+
 artifacts:
   files:
     - build/AuthService.zip

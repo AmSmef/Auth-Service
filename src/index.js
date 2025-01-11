@@ -1,67 +1,82 @@
-const express = require('express');
-const bodyParser = require('body-parser');
-const path = require('path');
 const AWS = require('aws-sdk');
+const dynamoDB = new AWS.DynamoDB.DocumentClient();
 
-const app = express();
-app.use(bodyParser.json());
+const TABLE_NAME = 'UserPool';  // Your DynamoDB table name
 
-// Serve static files from the "public" directory
-app.use(express.static(path.join(__dirname, 'public')));
+exports.handler = async (event) => {
+    const body = JSON.parse(event.body);
+    const { action, username, password } = body;
 
-// AWS Lambda setup
-AWS.config.update({ region: 'eu-west-2' });
-const lambda = new AWS.Lambda();
+    let response = {
+        statusCode: 200,
+        headers: {
+            'Access-Control-Allow-Origin': '*',  // Allow any origin (use a specific domain in production)
+            'Access-Control-Allow-Methods': 'OPTIONS, POST, GET',
+            'Access-Control-Allow-Headers': 'Content-Type'
+        },
+        body: ''
+    };
 
-// Example routes for authentication
-app.post('/signup', async (req, res) => {
-  const { username, password } = req.body;
+    if (action === 'signup') {
+        // Check if the username already exists
+        const params = {
+            TableName: TABLE_NAME,
+            Key: { username }
+        };
 
-  const params = {
-    FunctionName: 'AuthenticationLambda',
-    Payload: JSON.stringify({
-      action: 'signup',
-      username,
-      password,
-    }),
-  };
+        try {
+            const result = await dynamoDB.get(params).promise();
 
-  try {
-    const response = await lambda.invoke(params).promise();
-    const data = JSON.parse(response.Payload);
+            if (result.Item) {
+                response.statusCode = 400;
+                response.body = JSON.stringify({ success: false, message: 'Username already exists' });
+            } else {
+                // Store the password as-is (without hashing)
+                const putParams = {
+                    TableName: TABLE_NAME,
+                    Item: { username, password }
+                };
 
-    res.status(data.statusCode).json(JSON.parse(data.body));
-  } catch (error) {
-    console.error('Error invoking Lambda:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-});
+                await dynamoDB.put(putParams).promise();
 
-app.post('/login', async (req, res) => {
-  const { username, password } = req.body;
+                response.body = JSON.stringify({ success: true });
+            }
+        } catch (error) {
+            console.error(error);
+            response.statusCode = 500;
+            response.body = JSON.stringify({ success: false, message: 'Internal server error' });
+        }
+    } else if (action === 'login') {
+        // Login logic
+        const params = {
+            TableName: TABLE_NAME,
+            Key: { username }
+        };
 
-  const params = {
-    FunctionName: 'AuthenticationLambda',
-    Payload: JSON.stringify({
-      action: 'login',
-      username,
-      password,
-    }),
-  };
+        try {
+            const result = await dynamoDB.get(params).promise();
 
-  try {
-    const response = await lambda.invoke(params).promise();
-    const data = JSON.parse(response.Payload);
+            if (!result.Item) {
+                // Username not found
+                response.statusCode = 400;
+                response.body = JSON.stringify({ success: false, message: 'Username not found' });
+            } else if (result.Item.password !== password) {
+                // Password does not match
+                response.statusCode = 400;
+                response.body = JSON.stringify({ success: false, message: 'Incorrect password' });
+            } else {
+                // Successful login
+                response.body = JSON.stringify({ success: true });
+            }
+        } catch (error) {
+            console.error(error);
+            response.statusCode = 500;
+            response.body = JSON.stringify({ success: false, message: 'Internal server error' });
+        }
+    } else {
+        response.statusCode = 400;
+        response.body = JSON.stringify({ success: false, message: 'Invalid action' });
+    }
 
-    res.status(data.statusCode).json(JSON.parse(data.body));
-  } catch (error) {
-    console.error('Error invoking Lambda:', error);
-    res.status(500).json({ message: 'Internal server error' });
-  }
-});
-
-// Start the server
-const PORT = process.env.PORT || 3001;
-app.listen(PORT, '0.0.0.0', () => {
-  console.log(`Authentication service running on port ${PORT}`);
-});
+    return response;
+};

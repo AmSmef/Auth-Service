@@ -7,11 +7,16 @@ phases:
     commands:
       - echo Installing dependencies...
       - npm install
+
   build:
     commands:
       - echo Packaging Lambda function...
       - mkdir -p build
       - zip -r build/AuthService.zip src package.json package-lock.json
+      - echo Deploying to Lambda...
+      # Deploy the Lambda function using the AWS CLI
+      - aws lambda update-function-code --function-name AuthenticationLambda --zip-file fileb://build/AuthService.zip
+
 artifacts:
   files:
     - build/AuthService.zip

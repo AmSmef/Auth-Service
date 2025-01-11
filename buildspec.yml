@@ -17,7 +17,7 @@ phases:
       # Copy index.js from src/ to the root directory
       - cp src/index.js .  # Copy the index.js to the root directory
       # Include node_modules in the zip package along with other files
-      - zip -r build/AuthService.zip index.js package.json package-lock.json node_modules  # Include node_modules
+      - zip -r build/AuthService.zip index.js package.json package-lock.json node_modules/*  # Include node_modules contents
       # Optionally, you can also include other files if needed
       - echo Deploying to Lambda...
       # Deploy the Lambda function using the AWS CLI

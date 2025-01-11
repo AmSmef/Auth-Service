@@ -8,6 +8,12 @@ phases:
       - echo Installing dependencies...
       - npm install  # Install dependencies and create node_modules folder
 
+  pre_build:
+    commands:
+      - echo Running Jest tests...
+      - npm test  # Run the tests using Jest
+      # If tests fail, the build will stop here, and Lambda will not be deployed
+
   build:
     commands:
       - echo Packaging Lambda function...

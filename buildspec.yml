@@ -31,7 +31,7 @@ phases:
 
       - echo syncing frontend files to to S3...
 
-      - aws s3 sync ./auth/ s3://devops-bucket-amsmef/frontend/auth/ --acl public-read
+      - aws s3 sync ./auth/ s3://devops-bucket-amsmef/frontend/auth/
 
 artifacts:
   files:
